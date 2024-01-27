@@ -165,15 +165,24 @@ export async function installFromVersion(version: string): Promise<void>  {
   } else {
     core.info(`Windows detected, setting up bb.exe`)
 
-    await exec.exec('powershell', ['-command', `if (Test-Path('bb.exe')) { return } else { (New-Object Net.WebClient).DownloadFile('https://github.com/babashka/babashka/releases/download/v${version}/babashka-${version}-windows-amd64.zip', 'bb.zip') }`]);
-    await exec.exec('powershell', ['-command', "if (Test-Path('bb.exe')) { return } else { Expand-Archive bb.zip . }"]);
+    // Define the tool name and tool directory
+    const toolName = 'Babashka';
+    const tmpDir = path.join(os.tmpdir(), toolName);
 
-    toolPath = await tc.cacheFile(
-      'bb.exe',
-      'bb.exe',
-      'Babashka',
-      version,
-      os.arch())
+    // Check if the tool has been cached already
+
+    // Define the URLs for the tool's zip file
+    const toolZipUrl = `https://github.com/babashka/babashka/releases/download/v${version}/babashka-${version}-windows-amd64.zip`;
+    const toolZipPath = path.join(tmpDir, 'bb.zip');
+
+    // Download the tool's zip file
+    await tc.downloadTool(toolZipUrl, toolZipPath);
+
+    // Extract the tool's zip file
+    const extractedDir = await tc.extractZip(toolZipPath);
+
+    // Cache the extracted tool directory and get the path to the cached tool directory
+    toolPath = await tc.cacheDir(extractedDir, toolName, version, os.arch());
   }
 
   core.info(`babashka setup at ${toolPath}`)
